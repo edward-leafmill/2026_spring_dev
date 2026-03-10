@@ -50,23 +50,50 @@ cmake --version     # CMake 확인
 
 ## 2. 빌드 & 실행
 
-### Ctrl+Shift+B (기본 빌드)
-전체 프로젝트(모든 lab)를 한번에 빌드합니다.
+### 먼저 타깃(문제 번호) 바꾸기
+1. VS Code 하단 상태 표시줄에서 **CMake Launch Target** 클릭
+2. 실행할 타깃 선택 (예: `lab_q01`, `lab_q04`)
+3. 이후 `F5`/`Ctrl+F5`는 선택된 타깃 기준으로 동작
 
-### F5 (디버그 실행)
-1. VS Code 하단 상태 표시줄에서 **CMake 빌드 타깃**을 선택 (예: `lab_q01`)
-2. `F5`를 누르면 해당 타깃만 빌드 후 **디버거(GDB)가 연결된 상태**로 실행됩니다.
-3. 브레이크포인트를 설정하고 단계별 실행이 가능합니다.
+### 단축키별 실제 동작 (이 프로젝트 기준)
 
-### Ctrl+F5 (디버그 없이 실행)
-`Ctrl+F5`를 누르면 디버거 **없이** 프로그램만 실행됩니다.
-브레이크포인트가 동작하지 않으며 변수/콜스택 확인이 불가능합니다.
+| 단축키 | 실행 명령 성격 | 실제 체인 |
+|------|------|------|
+| `Ctrl+Shift+B` | 전체 빌드 | `configure (cmake UCRT64)` → `CMake: build all` (`course_all_labs`) |
+| `F5` | 디버그 실행 | `configure` → `CMake: build launch target` → GDB 연결 실행 |
+| `Ctrl+F5` | 디버그 없이 실행 | `configure` → `CMake: build launch target` → 일반 실행 |
+| `Ctrl+Shift+F5` | CMake 컨텍스트에서 CMake 실행 | `cmake.launchTarget` (CMake: Run Without Debugging) 실행 |
+
+핵심 포인트:
+- 현재 `launch.json`의 `preLaunchTask`가 `CMake: build launch target`이라서, `F5`와 `Ctrl+F5` 모두 실행 전에 현재 Launch Target을 먼저 빌드합니다.
+- `tasks.json`의 `CMake: build launch target`은 `${command:cmake.launchTargetName}`만 빌드하므로 전체 빌드보다 보통 빠릅니다.
+- `Ctrl+Shift+F5`는 CMake Tools 확장의 기본 키바인딩입니다.
+- 현재 프로젝트는 `cmake.buildBeforeRun = true`라서 `Ctrl+Shift+F5`(`cmake.launchTarget`) 실행 시에도 Launch Target을 먼저 빌드합니다(변경 없으면 증분 빌드로 빠르게 통과).
+- `Ctrl+Shift+F5`는 컨텍스트 기반으로 동작합니다: 디버그 세션 중(`inDebugMode`)에는 VS Code 기본 `Debug: Restart`가 동작하고, 디버그 세션이 아닐 때 CMake 키바인딩이 동작합니다.
+
+### 실제 속도 비교 (이 저장소에서 측정)
+
+동일 조건( `labs/q04/main.cpp` 변경 후 )에서 빌드 시간:
+- `cmake --build build --target lab_q04`: 약 **1.503초**
+- `cmake --build build --target course_all_labs`: 약 **2.246초**
+- `build/labs/q04/lab_q04.exe` 실행 자체: 약 **0.093초**
+
+정리:
+- 타깃 1개만 수정하며 반복 실행할 때는 Launch Target 단위 빌드가 더 빠릅니다.
+- `Ctrl+Shift+B`(전체 빌드)는 여러 타깃의 의존성/상태를 한 번에 점검할 때 적합합니다.
+- `Ctrl+F5`는 이 프로젝트에서 "추가 작업"을 크게 더 하는 것이 아니라, `launch.json` 기준으로 **configure + launch target 빌드 + 실행** 체인을 수행합니다.
+
+### F5 / Ctrl+F5 / Ctrl+Shift+F5 확인 방법
+
+1. `Ctrl+Shift+P` → `Developer: Toggle Keyboard Shortcuts Troubleshooting`
+2. 각 단축키를 눌러 최종 `commandId` 확인
+3. 보통 `F5=workbench.action.debug.start`, `Ctrl+F5=workbench.action.debug.run`이고, `Ctrl+Shift+F5`는 컨텍스트에 따라 `cmake.launchTarget` 또는 `workbench.action.debug.restart`가 잡힙니다.
 
 ### 터미널에서 직접 빌드 (참고)
 
 ```bash
 cmake -S . -B build -G "MinGW Makefiles"
-cmake --build build
+cmake --build build --target course_all_labs
 ```
 
 특정 타깃만 빌드:
@@ -75,6 +102,18 @@ cmake --build build
 cmake --build build --target lab_q01
 ```
 
+### C++23 `std::print` / `std::println` 지원
+
+루트 [`CMakeLists.txt`](./CMakeLists.txt)에는 학기 공통 C++23 설정용
+`course_cpp23_support`가 정의되어 있습니다.
+
+- C++ Lab 타깃(`q*`)은 이 공통 설정을 통해 C++23 기능을 사용합니다.
+- MSYS2 UCRT64의 MinGW GCC에서는 `std::print` / `std::println` 사용 시
+  추가 런타임 라이브러리 `stdc++exp`가 필요하므로, 이 설정을 프로젝트 공통으로 연결합니다.
+- 참고: GCC 공식 문서도 Windows에서 `std::print` 사용 시 `-lstdc++exp`가 필요하다고 안내합니다.
+
+즉, 학생들은 각 과제별 `CMakeLists.txt`에서 `std::print` 때문에 별도 링크 옵션을 추가할 필요가 없습니다.
+
 ## 3. 과제 추가 방법
 
 새 과제 `q03`을 추가하려면:
@@ -82,6 +121,7 @@ cmake --build build --target lab_q01
 **1단계.** `labs/q03/` 폴더를 만들고 `main.cpp`를 작성합니다.
 
 **2단계.** `labs/q01/CMakeLists.txt`를 `labs/q03/`에 복사합니다.
+이 파일에는 학기 공통 C++23 설정(`enable_course_cpp23`)이 이미 포함되어 있습니다.
 
 ```
 labs/q03/
@@ -111,9 +151,11 @@ labs/q03/
 | `g++`/`cmake` 명령을 못 찾음 | MSYS2 UCRT64 터미널에서 1-2 설치 명령 재실행 |
 | VS Code에서 빌드 실패 | VS Code를 완전히 종료 후 재실행 |
 | IntelliSense 헤더 오류 (빨간 밑줄) | `Ctrl+Shift+P` → "C/C++: Edit Configurations" → compilerPath가 `C:\msys64\ucrt64\bin\g++.exe`인지 확인 |
-| 디버그 시 프로그램 못 찾음 | 하단 상태 표시줄에서 올바른 CMake 타깃을 선택했는지 확인 |
+| `Ctrl+F5` / `F5` 시 프로그램을 못 찾음 | 하단 상태 표시줄에서 올바른 **CMake Launch Target**을 선택했는지 확인 |
+| `F5`와 `Ctrl+F5`가 반대로 보임 | 실행 구성 이름이나 아이콘이 아니라 실제 명령(`debug.start` / `debug.run`)을 Keyboard Shortcuts Troubleshooting으로 확인 |
 | `where g++` 결과가 여러 개 | `mingw64`와 `ucrt64` 혼용 금지 — `ucrt64\bin` 하나만 PATH에 유지 |
 | 실행 시 `api-ms-win-crt-*.dll` 못 찾음 | 아래 **DLL 로딩 오류** 항목 참고 |
+| `std::print` 사용 시 `undefined reference` 링크 에러 | 해당 Lab의 `CMakeLists.txt`가 `enable_course_cpp23(...)`를 포함하는지 확인 |
 
 ### DLL 로딩 오류 (`api-ms-win-crt-*.dll` / `0xc0000135`)
 
@@ -135,8 +177,9 @@ cannot open shared object file: No such file or directory
    - 사용자 기본 터미널: **MSYS2 UCRT64** 유지 (개발 편의)
    - 자동 실행(빌드/디버그): **cmd.exe**로 고정 (`automationProfile.windows`)
 
-2. **디버그 콘솔 분리**
-   - launch.json의 `console`을 `internalConsole`로 사용하여 Bash 경유 최소화
+2. **런치 구성 단순화**
+   - `launch.json`은 `cmake.launchTargetPath` / `cmake.launchTargetDirectory`를 직접 사용
+   - 불필요한 추가 디버그 설정(`cmake.debugConfig`, 강제 `internalConsole`)을 제거하여 `hello_simple`과 같은 흐름으로 유지
 
 3. **PATH 정리**
    - 디버그 환경 PATH: `C:\Windows\System32;C:\msys64\ucrt64\bin;...` (Windows 시스템 경로 우선)
@@ -243,11 +286,19 @@ Copy-Item "$vscode\bin" "$vscode\$($hash.Name)\bin" -Recurse -Force
 - **settings.json**:
   - 기본 터미널: MSYS2 UCRT64 (`msys2_shell.cmd -ucrt64`), `MSYS2_PATH_TYPE=inherit`로 Windows PATH 상속
   - 자동화 프로필(`automationProfile.windows`): **cmd.exe**로 고정 — 빌드/디버그 Task가 Bash를 경유하지 않도록 분리
-  - CMake 경로/Generator 명시
-- **tasks.json**: CMake configure + build Task 정의 (`Ctrl+Shift+B` 연결)
+  - CMake 경로/Generator와 `cmake.buildDirectory`를 명시
+  - `cmake.buildBeforeRun = true`로 설정하여, CMake 실행 명령(`Ctrl+Shift+F5`)에서도 실행 전 빌드를 보장
+- **tasks.json**:
+  - `cmake.exe`를 직접 호출하는 shell Task로 configure/build 수행
+  - `Ctrl+Shift+B` 기본 빌드는 전체 프로젝트를 빌드
+  - 실행/디버그 전에는 `CMake: build launch target` Task로 현재 선택한 Launch Target만 빌드
 - **launch.json**:
+  - 실행 구성 이름을 **Debug CMake launch target**으로 명확히 유지하여 의미 혼동을 줄임
   - GDB 디버거 경로 고정 (`C:\msys64\ucrt64\bin\gdb.exe`)
-  - 디버그 콘솔: `internalConsole` — Bash 경유 없이 Windows 프로세스 체인으로 실행
   - 디버그 PATH: `C:\Windows\System32;C:\msys64\ucrt64\bin;...` (Windows 시스템 경로 우선)
-  - CMake 타깃 자동 연결 (`F5` 연결)
+  - 실행 파일/작업 디렉터리를 `cmake.launchTargetPath`, `cmake.launchTargetDirectory`로 자동 연결
+  - `preLaunchTask`로 현재 Launch Target을 먼저 빌드한 뒤 `F5` / `Ctrl+F5` 실행
+- **키보드 단축키**:
+  - 이 프로젝트의 `.vscode`에는 F5/Ctrl+F5 키를 바꾸는 설정이 없음
+  - 키 동작은 VS Code 기본 키바인딩과 사용자 전역 설정이 결정
 - **c_cpp_properties.json**: IntelliSense가 UCRT64 컴파일러와 `compile_commands.json`을 사용하도록 지정
