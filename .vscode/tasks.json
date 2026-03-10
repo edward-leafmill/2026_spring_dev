@@ -3,13 +3,13 @@
     "tasks": [
         {
             "label": "configure (cmake UCRT64)",
-            "type": "process",
+            "type": "shell",
             "command": "C:\\msys64\\ucrt64\\bin\\cmake.exe",
             "args": [
                 "-S",
                 "${workspaceFolder}",
                 "-B",
-                "${workspaceFolder}/build",
+                "${command:cmake.buildDirectory}",
                 "-G",
                 "MinGW Makefiles",
                 "-DCMAKE_BUILD_TYPE=Debug"
@@ -20,30 +20,34 @@
             "problemMatcher": []
         },
         {
-            "label": "build (cmake UCRT64)",
-            "type": "process",
+            "label": "CMake: build all",
+            "type": "shell",
             "command": "C:\\msys64\\ucrt64\\bin\\cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/build"
+                "${command:cmake.buildDirectory}",
+                "--target",
+                "course_all_labs"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
             "dependsOn": "configure (cmake UCRT64)",
-            "problemMatcher": [],
+            "problemMatcher": [
+                "$gcc"
+            ],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             }
         },
         {
-            "label": "build (cmake launch target UCRT64)",
-            "type": "process",
+            "label": "CMake: build launch target",
+            "type": "shell",
             "command": "C:\\msys64\\ucrt64\\bin\\cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/build",
+                "${command:cmake.buildDirectory}",
                 "--target",
                 "${command:cmake.launchTargetName}"
             ],
@@ -51,15 +55,21 @@
                 "cwd": "${workspaceFolder}"
             },
             "dependsOn": "configure (cmake UCRT64)",
-            "problemMatcher": []
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
-            "label": "build (q01 UCRT64)",
-            "type": "process",
+            "label": "CMake: build q01",
+            "type": "shell",
             "command": "C:\\msys64\\ucrt64\\bin\\cmake.exe",
             "args": [
                 "--build",
-                "${workspaceFolder}/build",
+                "${command:cmake.buildDirectory}",
                 "--target",
                 "lab_q01"
             ],
@@ -67,7 +77,9 @@
                 "cwd": "${workspaceFolder}"
             },
             "dependsOn": "configure (cmake UCRT64)",
-            "problemMatcher": []
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }
