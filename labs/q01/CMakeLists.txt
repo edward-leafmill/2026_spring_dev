@@ -12,5 +12,5 @@ if(NOT _SOURCES)
     return()
 endif()
 
-add_executable(${_TARGET} ${_SOURCES})
+add_executable(${_TARGET} EXCLUDE_FROM_ALL ${_SOURCES})
 target_include_directories(${_TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

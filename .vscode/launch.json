@@ -2,40 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug q01 (UCRT64 gdb)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/labs/q01/lab_q01.exe",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build/labs/q01",
-            "environment": [
-                {
-                    "name": "PATH",
-                    "value": "C:\\Windows\\System32;C:\\msys64\\ucrt64\\bin;${env:PATH}"
-                }
-            ],
-            "externalConsole": false,
-            "console": "internalConsole",
-            "MIMode": "gdb",
-            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
-            "setupCommands": [
-                {
-                    "description": "Enable GDB pretty printing",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "build (q01 UCRT64)"
-        },
-        {
-            "name": "Debug (CMake Launch Target - UCRT64)",
+            "name": "C/C++: Debug CMake launch target (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${command:cmake.launchTargetDirectory}",
             "environment": [
                 {
                     "name": "PATH",
@@ -43,7 +16,6 @@
                 }
             ],
             "externalConsole": false,
-            "console": "internalConsole",
             "MIMode": "gdb",
             "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
             "setupCommands": [
@@ -52,8 +24,7 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ],
-            "preLaunchTask": "build (cmake launch target UCRT64)"
+            ]
         }
     ]
 }

@@ -59,16 +59,15 @@ cmake --version     # CMake 확인
 
 | 단축키 | 실행 명령 성격 | 실제 체인 |
 |------|------|------|
-| `Ctrl+Shift+B` | 전체 빌드 | `configure (cmake UCRT64)` → `CMake: build all` (`course_all_labs`) |
-| `F5` | 디버그 실행 | `configure` → `CMake: build launch target` → GDB 연결 실행 |
-| `Ctrl+F5` | 디버그 없이 실행 | `configure` → `CMake: build launch target` → 일반 실행 |
-| `Ctrl+Shift+F5` | CMake 컨텍스트에서 CMake 실행 | `cmake.launchTarget` (CMake: Run Without Debugging) 실행 |
+| `Ctrl+Shift+B` | 기본 빌드(현재 기본 Task) | `configure (cmake UCRT64)` → `CMake: build launch target` |
+| `F5` | 디버그 실행 | (필요 시 configure) → (buildBeforeRun) Launch Target 빌드 → GDB 연결 실행 |
+| `Ctrl+F5` | 디버그 없이 실행 | (필요 시 configure) → (buildBeforeRun) Launch Target 빌드 → 일반 실행 |
+| `Ctrl+Shift+F5` | CMake 컨텍스트에서 CMake 실행 | `cmake.launchTarget` (Run Without Debugging, buildBeforeRun 적용) |
 
 핵심 포인트:
-- 현재 `launch.json`의 `preLaunchTask`가 `CMake: build launch target`이라서, `F5`와 `Ctrl+F5` 모두 실행 전에 현재 Launch Target을 먼저 빌드합니다.
+- 이 프로젝트는 `cmake.buildBeforeRun = true`를 사용하므로, `F5`/`Ctrl+F5`/`Ctrl+Shift+F5` 모두 실행 전에 Launch Target 빌드를 보장합니다(변경 없으면 증분 빌드로 빠르게 통과).
 - `tasks.json`의 `CMake: build launch target`은 `${command:cmake.launchTargetName}`만 빌드하므로 전체 빌드보다 보통 빠릅니다.
 - `Ctrl+Shift+F5`는 CMake Tools 확장의 기본 키바인딩입니다.
-- 현재 프로젝트는 `cmake.buildBeforeRun = true`라서 `Ctrl+Shift+F5`(`cmake.launchTarget`) 실행 시에도 Launch Target을 먼저 빌드합니다(변경 없으면 증분 빌드로 빠르게 통과).
 - `Ctrl+Shift+F5`는 컨텍스트 기반으로 동작합니다: 디버그 세션 중(`inDebugMode`)에는 VS Code 기본 `Debug: Restart`가 동작하고, 디버그 세션이 아닐 때 CMake 키바인딩이 동작합니다.
 
 ### 실제 속도 비교 (이 저장소에서 측정)
@@ -80,8 +79,8 @@ cmake --version     # CMake 확인
 
 정리:
 - 타깃 1개만 수정하며 반복 실행할 때는 Launch Target 단위 빌드가 더 빠릅니다.
-- `Ctrl+Shift+B`(전체 빌드)는 여러 타깃의 의존성/상태를 한 번에 점검할 때 적합합니다.
-- `Ctrl+F5`는 이 프로젝트에서 "추가 작업"을 크게 더 하는 것이 아니라, `launch.json` 기준으로 **configure + launch target 빌드 + 실행** 체인을 수행합니다.
+- 여러 타깃의 의존성/상태를 한 번에 점검하려면 `CMake: build all` Task를 직접 실행합니다.
+- `Ctrl+F5`는 이 프로젝트에서 `cmake.buildBeforeRun` 기준으로 **(필요 시 configure) + launch target 빌드 + 실행** 체인을 수행합니다.
 
 ### F5 / Ctrl+F5 / Ctrl+Shift+F5 확인 방법
 
@@ -104,8 +103,7 @@ cmake --build build --target lab_q01
 
 ### C++23 `std::print` / `std::println` 지원
 
-루트 [`CMakeLists.txt`](./CMakeLists.txt)에는 학기 공통 C++23 설정용
-`course_cpp23_support`가 정의되어 있습니다.
+루트 [`CMakeLists.txt`](./CMakeLists.txt)에서 학기 공통 C++23 설정을 전역으로 적용합니다.
 
 - C++ Lab 타깃(`q*`)은 이 공통 설정을 통해 C++23 기능을 사용합니다.
 - MSYS2 UCRT64의 MinGW GCC에서는 `std::print` / `std::println` 사용 시
@@ -121,7 +119,8 @@ cmake --build build --target lab_q01
 **1단계.** `labs/q03/` 폴더를 만들고 `main.cpp`를 작성합니다.
 
 **2단계.** `labs/q01/CMakeLists.txt`를 `labs/q03/`에 복사합니다.
-이 파일에는 학기 공통 C++23 설정(`enable_course_cpp23`)이 이미 포함되어 있습니다.
+학기 공통 C++23/`std::print` 설정은 루트 `CMakeLists.txt`에서 전역 적용되므로
+과제별 파일에서는 별도 설정이 필요하지 않습니다.
 
 ```
 labs/q03/
@@ -155,7 +154,7 @@ labs/q03/
 | `F5`와 `Ctrl+F5`가 반대로 보임 | 실행 구성 이름이나 아이콘이 아니라 실제 명령(`debug.start` / `debug.run`)을 Keyboard Shortcuts Troubleshooting으로 확인 |
 | `where g++` 결과가 여러 개 | `mingw64`와 `ucrt64` 혼용 금지 — `ucrt64\bin` 하나만 PATH에 유지 |
 | 실행 시 `api-ms-win-crt-*.dll` 못 찾음 | 아래 **DLL 로딩 오류** 항목 참고 |
-| `std::print` 사용 시 `undefined reference` 링크 에러 | 해당 Lab의 `CMakeLists.txt`가 `enable_course_cpp23(...)`를 포함하는지 확인 |
+| `std::print` 사용 시 `undefined reference` 링크 에러 | 루트 `CMakeLists.txt`의 MinGW용 `stdc++exp` 링크 설정이 유지되어 있는지 확인 |
 
 ### DLL 로딩 오류 (`api-ms-win-crt-*.dll` / `0xc0000135`)
 
@@ -290,14 +289,14 @@ Copy-Item "$vscode\bin" "$vscode\$($hash.Name)\bin" -Recurse -Force
   - `cmake.buildBeforeRun = true`로 설정하여, CMake 실행 명령(`Ctrl+Shift+F5`)에서도 실행 전 빌드를 보장
 - **tasks.json**:
   - `cmake.exe`를 직접 호출하는 shell Task로 configure/build 수행
-  - `Ctrl+Shift+B` 기본 빌드는 전체 프로젝트를 빌드
-  - 실행/디버그 전에는 `CMake: build launch target` Task로 현재 선택한 Launch Target만 빌드
+  - `Ctrl+Shift+B` 기본 빌드는 현재 `CMake: build launch target`에 연결됨
+  - 전체 빌드가 필요하면 `CMake: build all` Task를 실행
 - **launch.json**:
   - 실행 구성 이름을 **Debug CMake launch target**으로 명확히 유지하여 의미 혼동을 줄임
   - GDB 디버거 경로 고정 (`C:\msys64\ucrt64\bin\gdb.exe`)
   - 디버그 PATH: `C:\Windows\System32;C:\msys64\ucrt64\bin;...` (Windows 시스템 경로 우선)
   - 실행 파일/작업 디렉터리를 `cmake.launchTargetPath`, `cmake.launchTargetDirectory`로 자동 연결
-  - `preLaunchTask`로 현재 Launch Target을 먼저 빌드한 뒤 `F5` / `Ctrl+F5` 실행
+  - 실행 전 빌드는 `cmake.buildBeforeRun`으로 관리 (`preLaunchTask` 미사용)
 - **키보드 단축키**:
   - 이 프로젝트의 `.vscode`에는 F5/Ctrl+F5 키를 바꾸는 설정이 없음
   - 키 동작은 VS Code 기본 키바인딩과 사용자 전역 설정이 결정
